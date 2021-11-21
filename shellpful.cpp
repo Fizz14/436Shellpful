@@ -75,14 +75,46 @@ string overlastdir = homedir;
 int main (){
     int savedSTIN = dup(0);
     int savedSTOUT = dup(1);
+    int savedSTERR = dup(2);
     //cout << "\033[0m\n";
     time_t now = time(0);
     char* dt = ctime(&now);
     string dtstr = dt;
     dtstr.erase(std::remove(dtstr.begin(), dtstr.end(), '\n'), dtstr.end());
 
+    vector<pair<string, string>> errorTable;
+    
+    errorTable.push_back({"touch: missing file operand", "Try writing \"touch [filename]\" to create a new file with that filename."});
 
     while (true){
+        //print errors of last command
+        string x;
+        ifstream inFile;
+        inFile.open("ERRORS");
+        vector<string> errors;
+        while (getline(inFile,x)) {
+            cout << x << endl ;
+            errors.push_back(x);
+        }
+        remove("ERRORS");
+
+        //interpret command output
+        //if it has an error, provide a link to help
+        if(errors.size() > 0) {
+            string criticalError = errors[0];
+            string searchTerm = criticalError;
+            std::replace( searchTerm.begin(), searchTerm.end(), ' ', '+');
+            cout << "\033[1;93mhttps://www.bing.com/search?q=" << searchTerm << "\033[0m" << endl;
+
+            
+            for(auto x : errorTable) {
+                if(criticalError == x.first) {
+                    cout << "\033[1;35m" << x.second << "\033[0m" << endl;
+                }
+            }
+        }
+        
+
         cout << "\033[1;31mShellpful" + (string)get_current_dir_name() + "$\033[0m";
         string inputline;
         dup2(savedSTIN, 0);
@@ -383,7 +415,13 @@ int main (){
                             //dup2(savedSTOUT, 1);
                         }
                     }
+
+                    remove("ERRORS");
+                    int fileout = open("ERRORS", O_CREAT | O_RDWR, 0666);
+                    dup2(fileout, 2);
+
                     execvp (args [0], args);
+                    dup2(savedSTERR, 2);
                 }
                 
                 
