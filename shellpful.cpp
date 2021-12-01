@@ -14,6 +14,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <iomanip>
+
 bool showDevMessages = 1;
 
 //quick debug info
@@ -62,6 +64,29 @@ std::string getexepath() {
     return std::string( result, (count > 0) ? count : 0 );
 }
 
+string url_encode(const string &value) {
+    ostringstream escaped;
+    escaped.fill('0');
+    escaped << hex;
+
+    for (string::const_iterator i = value.begin(), n = value.end(); i != n; ++i) {
+        string::value_type c = (*i);
+
+        // Keep alphanumeric and other accepted characters intact
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << uppercase;
+        escaped << '%' << setw(2) << int((unsigned char) c);
+        escaped << nouppercase;
+    }
+
+    return escaped.str();
+}
+
 bool thisIsRedirectOutput = 0;
 bool thisIsRedirectInput = 0;
 
@@ -85,6 +110,9 @@ int main (){
     vector<pair<string, string>> errorTable;
     
     errorTable.push_back({"touch: missing file operand", "Try writing \"touch [filename]\" to create a new file with that filename."});
+    errorTable.push_back({"cat: myDirectory: Is a directory", "\"cat\" is a command for viewing files. You've tried calling \"cat\" on a directory instead of a file. Try writing \"cat [filename]\""});
+    errorTable.push_back({"cat: nonexistentFile: No such file or directory", "\"cat\" is a command for viewing files. You've tried calling \"cat\" on a file that's not in this directory. You can only call this command on files that are printed when you type \"ls\""});
+    
 
     while (true){
         //print errors of last command
@@ -103,15 +131,16 @@ int main (){
         if(errors.size() > 0) {
             string criticalError = errors[0];
             string searchTerm = criticalError;
-            std::replace( searchTerm.begin(), searchTerm.end(), ' ', '+');
-            cout << "\033[1;93mhttps://www.bing.com/search?q=" << searchTerm << "\033[0m" << endl;
+            searchTerm = url_encode(searchTerm);
+
+            cout << "\033[1;35mhttps://www.bing.com/search?q=" << searchTerm << "\033[0m" << endl;
 
             
             for(auto x : errorTable) {
                 if(criticalError == x.first) {
-                    cout << "\033[1;35m" << x.second << "\033[0m" << endl;
+                    cout << "\033[1;93m" << "Shellpful: " << x.second << "\033[0m" << endl;
                 }
-            }
+            }   
         }
         
 
@@ -318,9 +347,9 @@ int main (){
                 // Delete double-checking
                 //cout << command << endl;
                 if(command == "rm") {
-                    cout << "Are you sure you want to delete? " << endl;
+                    cout << "\033[1;93m" << "Shellpful: " <<"Are you sure you want to delete? y/n"  << "\033[0m"<< endl;
                     if(args[1][0] == '*'){
-                        cout << "Careful! You are fixing to delete every file in the directory " << get_current_dir_name() << "." << endl;
+                        cout << "Careful! You are fixing to delete every file in the directory " << get_current_dir_name() << "."  << "\033[0m"<< endl;
                     }
 
                     //show files to be deleted
@@ -328,33 +357,52 @@ int main (){
                     string response = "";
                     cin >> response;
                     if(response == "y" || response == "Y" || response == "yes" || response == "YES") {
-                        cout << "Proceeding to delete" << endl;
+                        cout << "\033[1;93m" << "Shellpful: " << "Approved deletion"  << "\033[0m"<< endl;
                     } else {
-                        cout << "Canceled deletion" << endl;
-                        break;
+                        cout << "\033[1;93m" << "Shellpful: " << "Canceled deletion"  << "\033[0m"<< endl;
+                        string a1 = "echo";
+                        string a2 = "";
+                        args[0] = (char *)a1.c_str();
+                        args[1] = (char *)a2.c_str();
+                        
                     }
                 }
 
                 // Map input to commands
                 if(command == "Delete" | command == "delete" | command == "del" | command =="Del") {
-                    cout << "Did you mean to use \"rm\"?" << endl;
+                    cout << "\033[1;93m" << "Shellpful: " << "Did you mean to use \"rm\"?"  << "\033[0m"<< endl;
                     break;
                 }
 
                 if(command == "Move" | command == "move") {
-                    cout << "Did you mean to use \"mv\"?" << endl;
+                    cout << "\033[1;93m" << "Shellpful: " << "Did you mean to use \"mv\"?"  << "\033[0m"<< endl;
                     break;
                 }
 
                 if(command == "Copy" | command == "copy") {
-                    cout << "Did you mean to use \"cp\"?" << endl;
+                    cout << "\033[1;93m" << "Shellpful: " << "Did you mean to use \"cp\"?"  << "\033[0m"<< endl;
                     break;
                 }
 
                 if(command == "Directory" | command == "directory" | command == "Dir" | command == "dir" | command == "Folder" | command == "folder") {
-                    cout << "Did you mean to use \"cd\"?" << endl;
+                    cout << "\033[1;93m" << "Shellpful: " << "Did you mean to use \"cd\"?"  << "\033[0m"<< endl;
                     break;
                 }
+
+                if(command == "help" | command == "Help") {
+                    cout << "\033[1;93m" << "Shellpful:" << endl;
+                    cout << "Use \"cd\" to change directory\n";
+                    cout << "Use \"ls\" to list the directory contents\n";
+                    cout << "Use \"mv\" to move a file or folder\n";
+                    cout << "Use \"cp\" to copy a file or folder\n";
+                    cout << "Use \"mkdir\" to create a directory or folder\n";
+                    cout << "Use \"rm\" to delete a file or folder\n";
+                    cout << "Use \"cat\" to view contents of a file\n";
+                    cout << "\nYou can also use \"--help\" to get more information about the commands. Ex: ls --help" << "\033[0m" << endl;
+
+                    break;
+                }
+
 
                 if(command == "cd") {
                     char buffer[MAXPATHLEN];
